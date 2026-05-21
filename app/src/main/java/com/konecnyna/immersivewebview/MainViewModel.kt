@@ -25,6 +25,9 @@ class MainViewModel : ViewModel() {
     private val _clearCacheTrigger = MutableStateFlow(0)
     val clearCacheTrigger: StateFlow<Int> = _clearCacheTrigger.asStateFlow()
 
+    private val _immersiveMode = MutableStateFlow(false)
+    val immersiveMode: StateFlow<Boolean> = _immersiveMode.asStateFlow()
+
     fun updateUrl(newUrl: String) {
         val formatted = if (newUrl.startsWith("http://") || newUrl.startsWith("https://")) {
             newUrl
@@ -44,5 +47,9 @@ class MainViewModel : ViewModel() {
 
     fun clearCache() {
         _clearCacheTrigger.value++
+    }
+
+    fun toggleImmersiveMode() {
+        _immersiveMode.value = !_immersiveMode.value
     }
 }

@@ -75,4 +75,20 @@ class MainViewModelTest {
         viewModel.updateUrl("http://10.0.0.1:8080")
         assertEquals("http://10.0.0.1:8080", viewModel.url.value)
     }
+
+    @Test
+    fun immersiveModeDefaultsOff() {
+        val viewModel = MainViewModel()
+        assertEquals(false, viewModel.immersiveMode.value)
+    }
+
+    @Test
+    fun toggleImmersiveModeFlipsState() {
+        val viewModel = MainViewModel()
+        assertEquals(false, viewModel.immersiveMode.value)
+        viewModel.toggleImmersiveMode()
+        assertEquals(true, viewModel.immersiveMode.value)
+        viewModel.toggleImmersiveMode()
+        assertEquals(false, viewModel.immersiveMode.value)
+    }
 }

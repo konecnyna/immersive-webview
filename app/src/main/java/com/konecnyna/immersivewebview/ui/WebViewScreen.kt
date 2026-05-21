@@ -11,12 +11,16 @@ import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
@@ -58,6 +62,7 @@ fun WebViewScreen(viewModel: MainViewModel) {
     val reloadTrigger by viewModel.reloadTrigger.collectAsStateWithLifecycle()
     val cacheMode by viewModel.cacheMode.collectAsStateWithLifecycle()
     val clearCacheTrigger by viewModel.clearCacheTrigger.collectAsStateWithLifecycle()
+    val immersiveMode by viewModel.immersiveMode.collectAsStateWithLifecycle()
     var showUrlDialog by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
     var canGoBack by remember { mutableStateOf(false) }
@@ -140,6 +145,19 @@ fun WebViewScreen(viewModel: MainViewModel) {
                                 },
                                 modifier = Modifier.testTag("menu_clear_cache"),
                             )
+                            DropdownMenuItem(
+                                text = { Text("Immersive (under status bar)") },
+                                onClick = {
+                                    viewModel.toggleImmersiveMode()
+                                    showMenu = false
+                                },
+                                trailingIcon = {
+                                    if (immersiveMode) {
+                                        Icon(Icons.Filled.Check, contentDescription = "Enabled")
+                                    }
+                                },
+                                modifier = Modifier.testTag("menu_immersive_toggle"),
+                            )
                             HorizontalDivider()
                             CacheMode.entries.forEach { mode ->
                                 DropdownMenuItem(
@@ -163,10 +181,18 @@ fun WebViewScreen(viewModel: MainViewModel) {
             }
         },
     ) { innerPadding ->
+        val topPadding = if (immersiveMode) {
+            0.dp
+        } else {
+            WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+        }
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = innerPadding.calculateBottomPadding()),
+                .padding(
+                    top = topPadding,
+                    bottom = innerPadding.calculateBottomPadding(),
+                ),
         ) {
             @SuppressLint("SetJavaScriptEnabled")
             AndroidView(
