@@ -41,4 +41,38 @@ class MainViewModelTest {
         viewModel.reload()
         assertEquals(2, viewModel.reloadTrigger.value)
     }
+
+    @Test
+    fun initialCacheModeIsDefault() {
+        val viewModel = MainViewModel()
+        assertEquals(CacheMode.DEFAULT, viewModel.cacheMode.value)
+    }
+
+    @Test
+    fun setCacheModeUpdatesState() {
+        val viewModel = MainViewModel()
+        viewModel.setCacheMode(CacheMode.NO_CACHE)
+        assertEquals(CacheMode.NO_CACHE, viewModel.cacheMode.value)
+        viewModel.setCacheMode(CacheMode.CACHE_FIRST)
+        assertEquals(CacheMode.CACHE_FIRST, viewModel.cacheMode.value)
+        viewModel.setCacheMode(CacheMode.CACHE_ONLY)
+        assertEquals(CacheMode.CACHE_ONLY, viewModel.cacheMode.value)
+    }
+
+    @Test
+    fun clearCacheIncrementsTrigger() {
+        val viewModel = MainViewModel()
+        assertEquals(0, viewModel.clearCacheTrigger.value)
+        viewModel.clearCache()
+        assertEquals(1, viewModel.clearCacheTrigger.value)
+        viewModel.clearCache()
+        assertEquals(2, viewModel.clearCacheTrigger.value)
+    }
+
+    @Test
+    fun httpCleartextUrlIsPreserved() {
+        val viewModel = MainViewModel()
+        viewModel.updateUrl("http://10.0.0.1:8080")
+        assertEquals("http://10.0.0.1:8080", viewModel.url.value)
+    }
 }
