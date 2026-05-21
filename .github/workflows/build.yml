@@ -25,7 +25,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.11.1'
+          gradle-version: '8.14.5'
 
       - name: Accept Android SDK Licenses
         run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
@@ -46,18 +46,24 @@ jobs:
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.${{ github.run_number }}
-          name: v1.0.${{ github.run_number }}
+          tag_name: v1.1.${{ github.run_number }}
+          name: v1.1.${{ github.run_number }}
           body: |
-            ## Immersive WebView
+            ## Immersive WebView v1.1
 
             Modern Android WebView app built with:
-            - **Jetpack Compose** + **Material 3** (Material You dynamic colors)
-            - **AndroidX WebKit** for modern WebView APIs
+            - **Kotlin 2.3** + **Compose compiler plugin**
+            - **Jetpack Compose BOM 2026.05** + **Material 3** (Material You dynamic colors)
+            - **AndroidX WebKit 1.16** for modern WebView APIs
+            - **AGP 8.13** / **Gradle 8.14** / **compileSdk 36** (Android 16)
             - **Edge-to-edge** immersive display (draws behind status bar)
-            - **Customizable URL** via edit dialog
-            - **Bottom navigation**: Back, Forward, Reload, Edit URL
-            - **Kotlin 2.1** + **Compose compiler plugin**
+
+            ### What's new in v1.1
+            - **Cleartext HTTP support** — load `http://` sites and local network addresses
+            - **Cache management** — choose Default, Cache First, No Cache, or Cache Only mode
+            - **Clear cache** — wipe WebView cache and history from the overflow menu
+            - **Lifecycle management** — WebView pauses/resumes with the Activity lifecycle
+            - **Bumped all dependencies** to latest May 2026 versions
 
             ### Install
             Download `app-debug.apk` and sideload onto your Android device.

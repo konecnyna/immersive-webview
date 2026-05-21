@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.Arrangement
@@ -16,18 +17,23 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -36,21 +42,43 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.konecnyna.immersivewebview.CacheMode
 import com.konecnyna.immersivewebview.MainViewModel
 
 @Composable
 fun WebViewScreen(viewModel: MainViewModel) {
     val url by viewModel.url.collectAsStateWithLifecycle()
     val reloadTrigger by viewModel.reloadTrigger.collectAsStateWithLifecycle()
+    val cacheMode by viewModel.cacheMode.collectAsStateWithLifecycle()
+    val clearCacheTrigger by viewModel.clearCacheTrigger.collectAsStateWithLifecycle()
     var showUrlDialog by remember { mutableStateOf(false) }
+    var showMenu by remember { mutableStateOf(false) }
     var canGoBack by remember { mutableStateOf(false) }
     var canGoForward by remember { mutableStateOf(false) }
     var webView by remember { mutableStateOf<WebView?>(null) }
     var progress by remember { mutableIntStateOf(0) }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, webView) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE -> webView?.onPause()
+                Lifecycle.Event.ON_RESUME -> webView?.onResume()
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -84,11 +112,52 @@ fun WebViewScreen(viewModel: MainViewModel) {
                     ) {
                         Icon(Icons.Filled.Refresh, contentDescription = "Reload")
                     }
-                    IconButton(
-                        onClick = { showUrlDialog = true },
-                        modifier = Modifier.testTag("btn_url"),
-                    ) {
-                        Icon(Icons.Filled.Edit, contentDescription = "Change URL")
+                    Box {
+                        IconButton(
+                            onClick = { showMenu = true },
+                            modifier = Modifier.testTag("btn_menu"),
+                        ) {
+                            Icon(Icons.Filled.MoreVert, contentDescription = "More options")
+                        }
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false },
+                            modifier = Modifier.testTag("overflow_menu"),
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Edit URL") },
+                                onClick = {
+                                    showMenu = false
+                                    showUrlDialog = true
+                                },
+                                modifier = Modifier.testTag("menu_edit_url"),
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Clear Cache") },
+                                onClick = {
+                                    showMenu = false
+                                    viewModel.clearCache()
+                                },
+                                modifier = Modifier.testTag("menu_clear_cache"),
+                            )
+                            HorizontalDivider()
+                            CacheMode.entries.forEach { mode ->
+                                DropdownMenuItem(
+                                    text = { Text(mode.label) },
+                                    onClick = {
+                                        viewModel.setCacheMode(mode)
+                                        showMenu = false
+                                    },
+                                    leadingIcon = {
+                                        RadioButton(
+                                            selected = cacheMode == mode,
+                                            onClick = null,
+                                        )
+                                    },
+                                    modifier = Modifier.testTag("menu_cache_${mode.name}"),
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -114,6 +183,9 @@ fun WebViewScreen(viewModel: MainViewModel) {
                         settings.domStorageEnabled = true
                         settings.loadWithOverviewMode = true
                         settings.useWideViewPort = true
+                        settings.databaseEnabled = true
+                        settings.cacheMode = WebSettings.LOAD_DEFAULT
+                        settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
 
                         webViewClient = object : WebViewClient() {
                             override fun shouldOverrideUrlLoading(
@@ -141,6 +213,9 @@ fun WebViewScreen(viewModel: MainViewModel) {
                         webView = this
                     }
                 },
+                update = { view ->
+                    view.settings.cacheMode = cacheMode.toWebSettingsValue()
+                },
             )
 
             if (progress < 100) {
@@ -165,6 +240,13 @@ fun WebViewScreen(viewModel: MainViewModel) {
         }
     }
 
+    LaunchedEffect(clearCacheTrigger) {
+        if (clearCacheTrigger > 0) {
+            webView?.clearCache(true)
+            webView?.clearHistory()
+        }
+    }
+
     if (showUrlDialog) {
         UrlDialog(
             currentUrl = url,
@@ -175,6 +257,13 @@ fun WebViewScreen(viewModel: MainViewModel) {
             },
         )
     }
+}
+
+private fun CacheMode.toWebSettingsValue(): Int = when (this) {
+    CacheMode.DEFAULT -> WebSettings.LOAD_DEFAULT
+    CacheMode.CACHE_FIRST -> WebSettings.LOAD_CACHE_ELSE_NETWORK
+    CacheMode.NO_CACHE -> WebSettings.LOAD_NO_CACHE
+    CacheMode.CACHE_ONLY -> WebSettings.LOAD_CACHE_ONLY
 }
 
 @Composable
